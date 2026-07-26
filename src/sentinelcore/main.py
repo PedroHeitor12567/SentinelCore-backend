@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from sentinelcore.core.config.settings import get_settings
+from sentinelcore.core.errors.handlers import register_exception_handlers
 from sentinelcore.core.health import router as health_router
 
 
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
         redoc_url=f"{settings.api_v1_prefix}/redoc",
     )
 
+    register_exception_handlers(app)
     app.include_router(health_router)
 
     return app
