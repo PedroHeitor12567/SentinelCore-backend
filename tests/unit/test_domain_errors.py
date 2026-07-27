@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from sentinelcore.core.errors.handlers import register_exception_handlers
-from sentinelcore.shared.domain.errors import ConflictError, NotFoundError, ValidationError
+from sentinelcore.shared.domain.errors.conflict_error import ConflictError
+from sentinelcore.shared.domain.errors.not_found_error import NotFoundError
+from sentinelcore.shared.domain.errors.validation_error import ValidationError
 
 
 def _build_app() -> FastAPI:
