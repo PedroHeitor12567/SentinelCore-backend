@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
 from sentinelcore.core.config.settings import get_settings
-from sentinelcore.core.errors.handlers import register_exception_handlers
-from sentinelcore.core.health import router as health_router
+from sentinelcore.api.errors.handlers import register_exception_handlers
+from sentinelcore.api.health import router as health_router
 from sentinelcore.modules.identity.api.routers.user_router import router as identity_router
 
 

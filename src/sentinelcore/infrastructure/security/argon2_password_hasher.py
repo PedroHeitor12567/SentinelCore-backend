@@ -3,7 +3,7 @@ from argon2.exceptions import VerifyMismatchError
 
 
 class Argon2PasswordHasher:
-    def __int__(self) -> None:
+    def __init__(self) -> None:
         self._hasher = Argon2Hasher()
 
     def hash(self, plain_password: str) -> str:

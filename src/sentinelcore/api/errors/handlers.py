@@ -1,15 +1,13 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from sentinelcore.shared.domain.errors import (
-    ConflictError,
-    DomainError,
-    ForbiddenError,
-    NotFoundError,
-    RateLimitedError,
-    UnauthorizedError,
-    ValidationError,
-)
+from sentinelcore.shared.domain.errors.conflict_error import ConflictError
+from sentinelcore.shared.domain.errors.domain_error import DomainError
+from sentinelcore.shared.domain.errors.forbidden_error import ForbiddenError
+from sentinelcore.shared.domain.errors.not_found_error import NotFoundError
+from sentinelcore.shared.domain.errors.rate_limited_error import RateLimitedError
+from sentinelcore.shared.domain.errors.unauthorized_error import UnauthorizedError
+from sentinelcore.shared.domain.errors.validation_error import ValidationError
 
 _STATUS_BY_ERROR: dict[type[DomainError], int] = {
     NotFoundError: status.HTTP_404_NOT_FOUND,

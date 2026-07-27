@@ -3,13 +3,13 @@ from typing import Annotated
 from fastapi import Depends
 
 from sentinelcore.core.dependencies import UoW
-from sentinelcore.core.security.argon2_password_hasher import Argon2PasswordHasher
+from sentinelcore.infrastructure.security.argon2_password_hasher import Argon2PasswordHasher
 from sentinelcore.modules.identity.application.use_cases.activate_user_use_case import ActivateUserUseCase
 from sentinelcore.modules.identity.application.use_cases.create_user_use_case import CreateUserUseCase
 from sentinelcore.modules.identity.application.use_cases.deactive_user_use_case import DeactiveUserUseCase
 from sentinelcore.modules.identity.application.use_cases.get_user_use_case import GetUserUseCase
 from sentinelcore.modules.identity.application.ports.password_hasher import PasswordHasher
-from sentinelcore.modules.identity.domain.repository.user_repository import UserRepository
+from sentinelcore.modules.identity.application.ports.user_repository import UserRepository
 from sentinelcore.modules.identity.infrastructure.repository.sql_alchemy_user_repository import SqlAlchemyUserRepository
 
 _password_hasher = Argon2PasswordHasher()
