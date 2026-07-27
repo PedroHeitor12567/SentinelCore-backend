@@ -11,6 +11,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.35",
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
+    "argon2-cffi>=25.1.0",
 ]
 
 [dependency-groups]
@@ -44,7 +45,7 @@ python_version = "3.12"
 strict = true
 
 [tool.taskipy.tasks]
-run = "uvicorn src.main:app --reload"
+run = "uvicorn src.sentinelcore.main:app --reload"
 test = "uv run pytest"
 test-cov = "pytest --cov=src --cov-report=term-missing"
 lint = "ruff check ."
