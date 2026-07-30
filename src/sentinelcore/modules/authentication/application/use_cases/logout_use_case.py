@@ -2,6 +2,7 @@ from sentinelcore.modules.authentication.application.dtos.input.logout_input imp
 from sentinelcore.modules.authentication.application.ports.clock import Clock
 from sentinelcore.modules.authentication.application.ports.refresh_token_repository import RefreshTokenRepository
 from sentinelcore.modules.authentication.domain.errors.invalid_refresh_token_error import InvalidRefreshTokenError
+from sentinelcore.modules.authentication.domain.errors.refresh_token_reuse_detected_error import RefreshTokenReuseDetectedError
 from sentinelcore.modules.authentication.domain.services.token_hasher import hash_refresh_token
 from sentinelcore.shared.application.ports import UnitOfWork
 from sentinelcore.shared.application.use_case import UseCase
@@ -19,7 +20,15 @@ class LogoutUseCase(UseCase[LogoutInput, None]):
         if stored_token is None:
             raise InvalidRefreshTokenError("Refresh token not recognized")
 
-        if not stored_token.is_revoked:
-            stored_token.revoke(at=self._clock.now())
-            await self._refresh_token_repository.update(stored_token)
+        now = self._clock.now()
+
+        if stored_token.is_revoked:
+            await self._refresh_token_repository.revoke_all_for_user(stored_token.user_id, now)
             await self._unit_of_work.commit()
+            raise RefreshTokenReuseDetectedError(
+                "Refresh token reuse detected; all sessions have been revoked"
+            )
+
+        stored_token.revoke(at=now)
+        await self._refresh_token_repository.update(stored_token)
+        await self._unit_of_work.commit()

@@ -7,6 +7,7 @@ from sentinelcore.modules.authentication.application.dtos.input.logout_input imp
 from sentinelcore.modules.authentication.application.use_cases.logout_use_case import LogoutUseCase
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
 from sentinelcore.modules.authentication.domain.errors.invalid_refresh_token_error import InvalidRefreshTokenError
+from sentinelcore.modules.authentication.domain.errors.refresh_token_reuse_detected_error import RefreshTokenReuseDetectedError
 from sentinelcore.modules.authentication.domain.services.token_hasher import hash_refresh_token
 
 _TTL = timedelta(days=7)
@@ -39,20 +40,33 @@ async def test_logout_with_unknown_token_raises_invalid_refresh_token(
         await use_case.execute(LogoutInput(refresh_token="unknown-token"))
 
 
-async def test_logout_with_already_revoked_token_is_idempotent(
+async def test_logout_with_already_revoked_token_detects_reuse_and_revokes_all_sessions(
     refresh_token_repository, clock, unit_of_work
 ) -> None:
     raw_token = "raw-refresh-token"
+    user_id = uuid4()
     stored = RefreshToken.issue(
-        user_id=uuid4(),
+        user_id=user_id,
         token_hash=hash_refresh_token(raw_token),
         issued_at=clock.now(),
         expires_at=clock.now() + _TTL,
     )
     stored.revoke(at=clock.now())
     await refresh_token_repository.add(stored)
+
+    other_active = RefreshToken.issue(
+        user_id=user_id,
+        token_hash=hash_refresh_token("other-active-token"),
+        issued_at=clock.now(),
+        expires_at=clock.now() + _TTL,
+    )
+    await refresh_token_repository.add(other_active)
+
     use_case = LogoutUseCase(refresh_token_repository, clock, unit_of_work)
 
-    await use_case.execute(LogoutInput(refresh_token=raw_token))
+    with pytest.raises(RefreshTokenReuseDetectedError):
+        await use_case.execute(LogoutInput(refresh_token=raw_token))
 
-    assert unit_of_work.committed is False
+    other_reloaded = await refresh_token_repository.get_by_token_hash(hash_refresh_token("other-active-token"))
+    assert other_reloaded.is_revoked is True
+    assert unit_of_work.committed is True
