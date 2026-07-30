@@ -1,7 +1,7 @@
 import pytest
 
 from sentinelcore.modules.identity.application.use_cases.create_user_use_case import CreateUserUseCase
-from sentinelcore.modules.identity.application.dtos.create_user_input import CreateUserInput
+from sentinelcore.modules.identity.application.dtos.input.create_user_input import CreateUserInput
 from sentinelcore.modules.identity.domain.errors.email_already_in_use_error import EmailAlreadyInUseError
 from sentinelcore.modules.identity.domain.enums.user_status import UserStatus
 

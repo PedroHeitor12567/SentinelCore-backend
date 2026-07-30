@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from sentinelcore.core.config.settings import get_settings
 from sentinelcore.infrastructure.database.base import Base
+from sentinelcore.modules.authentication.infrastructure.models import refresh_token_model  # noqa: F401
 from sentinelcore.modules.identity.infrastructure import models  # noqa: F401
 
 config = context.config

@@ -1,5 +1,5 @@
-from sentinelcore.modules.identity.application.dtos.create_user_input import CreateUserInput
-from sentinelcore.modules.identity.application.dtos.user_output import UserOutput
+from sentinelcore.modules.identity.application.dtos.input.create_user_input import CreateUserInput
+from sentinelcore.modules.identity.application.dtos.output.user_output import UserOutput
 from sentinelcore.modules.identity.application.ports.password_hasher import PasswordHasher
 from sentinelcore.modules.identity.application.ports.user_repository import UserRepository
 from sentinelcore.modules.identity.domain.entities.user import User

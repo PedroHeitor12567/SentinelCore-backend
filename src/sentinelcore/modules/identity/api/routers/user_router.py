@@ -8,10 +8,10 @@ from sentinelcore.modules.identity.api.dependencies import (
     DeactivateUserUseCaseDep,
     GetUserUseCaseDep,
 )
-from sentinelcore.modules.identity.api.schemas.create_user_request import CreateUserRequest
-from sentinelcore.modules.identity.api.schemas.user_response import UserResponse
-from sentinelcore.modules.identity.application.dtos.create_user_input import CreateUserInput
-from sentinelcore.modules.identity.application.dtos.user_id_input import UserIdInput
+from sentinelcore.modules.identity.api.schemas.request.create_user_request import CreateUserRequest
+from sentinelcore.modules.identity.api.schemas.response.user_response import UserResponse
+from sentinelcore.modules.identity.application.dtos.input.create_user_input import CreateUserInput
+from sentinelcore.modules.identity.application.dtos.input.user_id_input import UserIdInput
 
 router = APIRouter(prefix="/users", tags=["identity"])
 
