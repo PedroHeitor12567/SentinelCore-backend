@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     rabbitmq_url: str = "amqp://sentinelcore:sentinelcore@localhost:5672/"
 
-    jwt_secret_key: str = "change-me"
+    jwt_secret_key: str = "change-me-to-a-random-secret-with-at-least-32-bytes"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7

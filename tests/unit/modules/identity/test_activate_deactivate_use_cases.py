@@ -4,7 +4,7 @@ import pytest
 
 from sentinelcore.modules.identity.application.use_cases.activate_user_use_case import ActivateUserUseCase
 from sentinelcore.modules.identity.application.use_cases.deactive_user_use_case import DeactiveUserUseCase
-from sentinelcore.modules.identity.application.dtos.user_id_input import UserIdInput
+from sentinelcore.modules.identity.application.dtos.input.user_id_input import UserIdInput
 from sentinelcore.modules.identity.domain.enums.user_status import UserStatus
 from sentinelcore.modules.identity.domain.errors.user_not_found_error import UserNotFoundError
 from sentinelcore.modules.identity.domain.entities.user import User

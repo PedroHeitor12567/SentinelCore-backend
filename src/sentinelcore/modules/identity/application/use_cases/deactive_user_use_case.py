@@ -1,5 +1,5 @@
-from sentinelcore.modules.identity.application.dtos.user_id_input import UserIdInput
-from sentinelcore.modules.identity.application.dtos.user_output import UserOutput
+from sentinelcore.modules.identity.application.dtos.input.user_id_input import UserIdInput
+from sentinelcore.modules.identity.application.dtos.output.user_output import UserOutput
 from sentinelcore.modules.identity.application.ports.user_repository import UserRepository
 from sentinelcore.modules.identity.domain.errors.user_not_found_error import UserNotFoundError
 from sentinelcore.shared.application.ports import UnitOfWork

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from sentinelcore.modules.identity.application.dtos.user_output import UserOutput
+from sentinelcore.modules.identity.application.dtos.output.user_output import UserOutput
 
 
 class UserResponse(BaseModel):
@@ -22,4 +22,4 @@ class UserResponse(BaseModel):
             created_at=output.created_at,
             updated_at=output.updated_at,
         )
-    
+
