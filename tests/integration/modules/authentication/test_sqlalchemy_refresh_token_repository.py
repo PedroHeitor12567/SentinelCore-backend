@@ -1,71 +1,90 @@
-from datetime import UTC, datetime
-from uuid import UUID
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from sentinelcore.infrastructure.database.base import Base
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
-from sentinelcore.modules.authentication.infrastructure.models.refresh_token_model import RefreshTokenModel
+from sentinelcore.modules.authentication.domain.entities.session import Session
+from sentinelcore.modules.authentication.infrastructure.repository.sql_alchemy_refresh_token_repository import (
+    SqlAlchemyRefreshTokenRepository,
+)
+from sentinelcore.modules.authentication.infrastructure.repository.sql_alchemy_session_repository import (
+    SqlAlchemySessionRepository,
+)
+from sentinelcore.modules.identity.infrastructure.models.user_model import UserModel  # noqa: F401
 
 
-def _as_utc(value: datetime | None) -> datetime | None:
-    if value is None:
-        return None
-    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+@pytest.fixture
+async def session() -> AsyncGenerator[AsyncSession]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+
+    async with session_factory() as db_session:
+        yield db_session
+
+    await engine.dispose()
 
 
-def _to_entity(model: RefreshTokenModel) -> RefreshToken:
-    return RefreshToken(
-        id=model.id,
-        user_id=model.user_id,
-        token_hash=model.token_hash,
-        created_at=_as_utc(model.created_at),
-        expires_at=_as_utc(model.expires_at),
-        revoked_at=_as_utc(model.revoked_at),
-        replaced_by_id=model.replaced_by_id,
+async def _new_session_and_token(db_session: AsyncSession, now: datetime) -> tuple[Session, RefreshToken]:
+    session_repository = SqlAlchemySessionRepository(db_session)
+    user_id = uuid4()
+    device_session = Session.start(user_id=user_id, started_at=now)
+    await session_repository.add(device_session)
+
+    token = RefreshToken.issue(
+        session_id=device_session.id,
+        user_id=user_id,
+        token_hash=f"hash-{uuid4()}",
+        issued_at=now,
+        expires_at=now + timedelta(days=7),
     )
+    return device_session, token
 
 
-def _to_model(refresh_token: RefreshToken) -> RefreshTokenModel:
-    return RefreshTokenModel(
-        id=refresh_token.id,
-        user_id=refresh_token.user_id,
-        token_hash=refresh_token.token_hash,
-        created_at=refresh_token.created_at,
-        expires_at=refresh_token.expires_at,
-        revoked_at=refresh_token.revoked_at,
-        replaced_by_id=refresh_token.replaced_by_id,
-    )
+async def test_add_and_get_by_token_hash_round_trip(session: AsyncSession) -> None:
+    repository = SqlAlchemyRefreshTokenRepository(session)
+    now = datetime.now(UTC)
+    device_session, token = await _new_session_and_token(session, now)
+
+    await repository.add(token)
+    await session.commit()
+
+    fetched = await repository.get_by_token_hash(token.token_hash)
+
+    assert fetched is not None
+    assert fetched.id == token.id
+    assert fetched.session_id == device_session.id
+    assert fetched.is_revoked is False
 
 
-class SqlAlchemyRefreshTokenRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+async def test_get_by_token_hash_returns_none_when_not_found(session: AsyncSession) -> None:
+    repository = SqlAlchemyRefreshTokenRepository(session)
 
-    async def get_by_token_hash(self, token_hash: str) -> RefreshToken | None:
-        statement = select(RefreshTokenModel).where(RefreshTokenModel.token_hash == token_hash)
-        result = await self._session.execute(statement)
-        model = result.scalar_one_or_none()
-        return _to_entity(model) if model is not None else None
+    fetched = await repository.get_by_token_hash("missing-hash")
 
-    async def add(self, refresh_token: RefreshToken) -> None:
-        self._session.add(_to_model(refresh_token))
-        await self._session.flush()
+    assert fetched is None
 
-    async def update(self, refresh_token: RefreshToken) -> None:
-        model = await self._session.get(RefreshTokenModel, refresh_token.id)
-        if model is None:
-            return
-        model.revoked_at = refresh_token.revoked_at
-        model.replaced_by_id = refresh_token.replaced_by_id
-        await self._session.flush()
 
-    async def revoke_all_for_user(self, user_id: UUID, revoked_at: datetime) -> None:
-        statement = (
-            update(RefreshTokenModel)
-            .where(RefreshTokenModel.user_id == user_id)
-            .where(RefreshTokenModel.revoked_at.is_(None))
-            .values(revoked_at=revoked_at)
-        )
-        await self._session.execute(statement)
-        await self._session.flush()
+async def test_update_persists_revocation_and_replacement(session: AsyncSession) -> None:
+    repository = SqlAlchemyRefreshTokenRepository(session)
+    now = datetime.now(UTC)
+    _, token = await _new_session_and_token(session, now)
+    await repository.add(token)
+    await session.commit()
+
+    replacement_id = uuid4()
+    token.revoke(at=now + timedelta(minutes=1), replaced_by_id=replacement_id)
+    await repository.update(token)
+    await session.commit()
+
+    fetched = await repository.get_by_token_hash(token.token_hash)
+    assert fetched is not None
+    assert fetched.is_revoked is True
+    assert fetched.replaced_by_id == replacement_id

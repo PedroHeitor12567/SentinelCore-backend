@@ -9,11 +9,9 @@ from tests.unit.modules.identity.fakes.fake_user_repository import FakeUserRepos
 def user_repository() -> FakeUserRepository:
     return FakeUserRepository()
 
-
 @pytest.fixture
 def password_hasher() -> FakePasswordHasher:
     return FakePasswordHasher()
-
 
 @pytest.fixture
 def unit_of_work() -> FakeUnitOfWork:

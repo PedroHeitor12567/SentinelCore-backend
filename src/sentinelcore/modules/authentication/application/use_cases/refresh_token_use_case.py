@@ -1,24 +1,44 @@
 from datetime import timedelta
 from secrets import token_urlsafe
 
-from sentinelcore.modules.authentication.application.dtos.input.refresh_token_input import RefreshTokenInput
+from sentinelcore.modules.authentication.application.dtos.input.refresh_token_input import (
+    RefreshTokenInput,
+)
 from sentinelcore.modules.authentication.application.dtos.output.token_pair_output import TokenPairOutput
 from sentinelcore.modules.authentication.application.ports.clock import Clock
-from sentinelcore.modules.authentication.application.ports.refresh_token_repository import RefreshTokenRepository
+from sentinelcore.modules.authentication.application.ports.refresh_token_repository import (
+    RefreshTokenRepository,
+)
+from sentinelcore.modules.authentication.application.ports.session_repository import SessionRepository
 from sentinelcore.modules.authentication.application.ports.token_service import TokenService
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
-from sentinelcore.modules.authentication.domain.errors.invalid_refresh_token_error import InvalidRefreshTokenError
-from sentinelcore.modules.authentication.domain.errors.refresh_token_expired_error import RefreshTokenExpiredError
-from sentinelcore.modules.authentication.domain.errors.refresh_token_reuse_detected_error import RefreshTokenReuseDetectedError
+from sentinelcore.modules.authentication.domain.errors.invalid_refresh_token_error import (
+    InvalidRefreshTokenError,
+)
+from sentinelcore.modules.authentication.domain.errors.refresh_token_expired_error import (
+    RefreshTokenExpiredError,
+)
+from sentinelcore.modules.authentication.domain.errors.refresh_token_reuse_detected_error import (
+    RefreshTokenReuseDetectedError,
+)
+from sentinelcore.modules.authentication.domain.errors.session_revoked_error import SessionRevokedError
 from sentinelcore.modules.authentication.domain.services.token_hasher import hash_refresh_token
 from sentinelcore.shared.application.ports import UnitOfWork
 from sentinelcore.shared.application.use_case import UseCase
 
 
-
 class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
-    def __init__(self, refresh_token_repository: RefreshTokenRepository, token_service: TokenService, clock: Clock, unit_of_work: UnitOfWork, refresh_token_ttl: timedelta) -> None:
+    def __init__(
+        self,
+        refresh_token_repository: RefreshTokenRepository,
+        session_repository: SessionRepository,
+        token_service: TokenService,
+        clock: Clock,
+        unit_of_work: UnitOfWork,
+        refresh_token_ttl: timedelta,
+    ) -> None:
         self._refresh_token_repository = refresh_token_repository
+        self._session_repository = session_repository
         self._token_service = token_service
         self._clock = clock
         self._unit_of_work = unit_of_work
@@ -32,8 +52,12 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
 
         now = self._clock.now()
 
+        session = await self._session_repository.get_by_id(stored_token.session_id)
+        if session is None or session.is_revoked:
+            raise SessionRevokedError("Session has been revoked")
+
         if stored_token.is_revoked:
-            await self._refresh_token_repository.revoke_all_for_user(stored_token.user_id, now)
+            await self._session_repository.revoke_all_for_user(session.user_id, now)
             await self._unit_of_work.commit()
             raise RefreshTokenReuseDetectedError(
                 "Refresh token reuse detected; all sessions have been revoked"
@@ -44,7 +68,8 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
 
         raw_refresh_token = token_urlsafe(32)
         new_refresh_token = RefreshToken.issue(
-            user_id=stored_token.user_id,
+            session_id=session.id,
+            user_id=session.user_id,
             token_hash=hash_refresh_token(raw_refresh_token),
             issued_at=now,
             expires_at=now + self._refresh_token_ttl,
@@ -54,7 +79,10 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
         stored_token.revoke(at=now, replaced_by_id=new_refresh_token.id)
         await self._refresh_token_repository.update(stored_token)
 
-        access_token = self._token_service.create_access_token(subject=str(stored_token.user_id))
+        session.touch(at=now, ip_address=input_data.ip_address, user_agent=input_data.user_agent)
+        await self._session_repository.update(session)
+
+        access_token = self._token_service.create_access_token(subject=str(session.user_id))
 
         await self._unit_of_work.commit()
 

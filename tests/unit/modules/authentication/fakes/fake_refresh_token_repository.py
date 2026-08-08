@@ -1,7 +1,5 @@
-from datetime import datetime
-from uuid import UUID
-
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
+
 
 class FakeRefreshTokenRepository:
     def __init__(self) -> None:
@@ -15,8 +13,3 @@ class FakeRefreshTokenRepository:
 
     async def update(self, refresh_token: RefreshToken) -> None:
         self._tokens[refresh_token.token_hash] = refresh_token
-
-    async def revoke_all_for_user(self, user_id: UUID, revoked_at: datetime) -> None:
-        for token in self._tokens.values():
-            if token.user_id == user_id and not token.is_revoked:
-                token.revoke(at=revoked_at)

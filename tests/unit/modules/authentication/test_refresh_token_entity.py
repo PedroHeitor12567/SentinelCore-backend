@@ -6,27 +6,31 @@ from sentinelcore.modules.authentication.domain.entities.refresh_token import Re
 _NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-def test_new_token_is_not_revoked() -> None:
-    token = RefreshToken.issue(
-        user_id=uuid4(), token_hash="hash", issued_at=_NOW, expires_at=_NOW + timedelta(days=7)
+def _issue() -> RefreshToken:
+    return RefreshToken.issue(
+        session_id=uuid4(),
+        user_id=uuid4(),
+        token_hash="hash",
+        issued_at=_NOW,
+        expires_at=_NOW + timedelta(days=7),
     )
+
+
+def test_new_token_is_not_revoked() -> None:
+    token = _issue()
 
     assert token.is_revoked is False
 
 
 def test_token_is_expired_when_current_time_reaches_expiry() -> None:
-    token = RefreshToken.issue(
-        user_id=uuid4(), token_hash="hash", issued_at=_NOW, expires_at=_NOW + timedelta(days=7)
-    )
+    token = _issue()
 
     assert token.is_expired(_NOW + timedelta(days=7)) is True
     assert token.is_expired(_NOW + timedelta(days=6)) is False
 
 
 def test_revoke_sets_revoked_at() -> None:
-    token = RefreshToken.issue(
-        user_id=uuid4(), token_hash="hash", issued_at=_NOW, expires_at=_NOW + timedelta(days=7)
-    )
+    token = _issue()
 
     token.revoke(at=_NOW + timedelta(hours=1))
 
@@ -35,9 +39,7 @@ def test_revoke_sets_revoked_at() -> None:
 
 
 def test_revoke_with_replacement_sets_replaced_by_id() -> None:
-    token = RefreshToken.issue(
-        user_id=uuid4(), token_hash="hash", issued_at=_NOW, expires_at=_NOW + timedelta(days=7)
-    )
+    token = _issue()
     replacement_id = uuid4()
 
     token.revoke(at=_NOW, replaced_by_id=replacement_id)
