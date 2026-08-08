@@ -3,7 +3,9 @@ from uuid import uuid4
 import pytest
 
 from sentinelcore.modules.authentication.domain.entities.session import Session
-from sentinelcore.modules.sessions.application.dtos.input.revoke_session_input import RevokeSessionInput
+from sentinelcore.modules.sessions.application.dtos.input.revoke_session_input import (
+    RevokeSessionInput,
+)
 from sentinelcore.modules.sessions.application.use_cases.revoke_session_use_case import (
     RevokeSessionUseCase,
 )

@@ -110,7 +110,7 @@ def test_refresh_with_unknown_token_returns_401(client: TestClient) -> None:
     assert response.json()["code"] == "invalid_refresh_token"
 
 
-def test_logout_revokes_refresh_token(client: TestClient) -> None:
+def test_logout_revokes_the_session(client: TestClient) -> None:
     _create_active_user(client, "user@example.com", "s3cr3t!!")
     login_response = client.post(
         "/api/v1/auth/login", json={"email": "user@example.com", "password": "s3cr3t!!"}
@@ -122,4 +122,23 @@ def test_logout_revokes_refresh_token(client: TestClient) -> None:
 
     refresh_after_logout = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refresh_after_logout.status_code == 401
-    assert refresh_after_logout.json()["code"] == "refresh_token_reuse_detected"
+    assert refresh_after_logout.json()["code"] == "session_revoked"
+
+
+def test_logout_with_rotated_out_token_detects_reuse_and_revokes_all_sessions(client: TestClient) -> None:
+    _create_active_user(client, "user@example.com", "s3cr3t!!")
+    login_response = client.post(
+        "/api/v1/auth/login", json={"email": "user@example.com", "password": "s3cr3t!!"}
+    )
+    old_refresh_token = login_response.json()["refresh_token"]
+
+    refresh_response = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh_token})
+    new_refresh_token = refresh_response.json()["refresh_token"]
+
+    logout_response = client.post("/api/v1/auth/logout", json={"refresh_token": old_refresh_token})
+    assert logout_response.status_code == 401
+    assert logout_response.json()["code"] == "refresh_token_reuse_detected"
+
+    refresh_after_reuse = client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh_token})
+    assert refresh_after_reuse.status_code == 401
+    assert refresh_after_reuse.json()["code"] == "session_revoked"

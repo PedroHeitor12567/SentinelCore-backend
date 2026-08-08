@@ -1,11 +1,12 @@
-from datetime import datetime, UTC
-from uuid import UUID
+from datetime import UTC, datetime
 
-from sqlalchemy import update, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sentinelcore.modules.authentication.infrastructure.models.refresh_token_model import RefreshTokenModel
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
+from sentinelcore.modules.authentication.infrastructure.models.refresh_token_model import (
+    RefreshTokenModel,
+)
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -13,9 +14,11 @@ def _as_utc(value: datetime | None) -> datetime | None:
         return None
     return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
+
 def _to_entity(model: RefreshTokenModel) -> RefreshToken:
     return RefreshToken(
         id=model.id,
+        session_id=model.session_id,
         user_id=model.user_id,
         token_hash=model.token_hash,
         created_at=_as_utc(model.created_at),
@@ -28,6 +31,7 @@ def _to_entity(model: RefreshTokenModel) -> RefreshToken:
 def _to_model(refresh_token: RefreshToken) -> RefreshTokenModel:
     return RefreshTokenModel(
         id=refresh_token.id,
+        session_id=refresh_token.session_id,
         user_id=refresh_token.user_id,
         token_hash=refresh_token.token_hash,
         created_at=refresh_token.created_at,
@@ -57,14 +61,4 @@ class SqlAlchemyRefreshTokenRepository:
             return
         model.revoked_at = refresh_token.revoked_at
         model.replaced_by_id = refresh_token.replaced_by_id
-        await self._session.flush()
-
-    async def revoke_all_for_user(self, user_id: UUID, revoked_at: datetime) -> None:
-        statement = (
-            update(RefreshTokenModel)
-            .where(RefreshTokenModel.user_id == user_id)
-            .where(RefreshTokenModel.revoked_at.is_(None))
-            .values(revoked_at=revoked_at)
-        )
-        await self._session.execute(statement)
         await self._session.flush()

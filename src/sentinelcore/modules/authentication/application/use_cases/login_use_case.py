@@ -4,10 +4,16 @@ from secrets import token_urlsafe
 from sentinelcore.modules.authentication.application.dtos.input.login_input import LoginInput
 from sentinelcore.modules.authentication.application.dtos.output.token_pair_output import TokenPairOutput
 from sentinelcore.modules.authentication.application.ports.clock import Clock
-from sentinelcore.modules.authentication.application.ports.refresh_token_repository import RefreshTokenRepository
+from sentinelcore.modules.authentication.application.ports.refresh_token_repository import (
+    RefreshTokenRepository,
+)
+from sentinelcore.modules.authentication.application.ports.session_repository import SessionRepository
 from sentinelcore.modules.authentication.application.ports.token_service import TokenService
 from sentinelcore.modules.authentication.domain.entities.refresh_token import RefreshToken
-from sentinelcore.modules.authentication.domain.errors.invalid_credentials_error import InvalidCredentialsError
+from sentinelcore.modules.authentication.domain.entities.session import Session
+from sentinelcore.modules.authentication.domain.errors.invalid_credentials_error import (
+    InvalidCredentialsError,
+)
 from sentinelcore.modules.authentication.domain.services.token_hasher import hash_refresh_token
 from sentinelcore.modules.identity.application.ports.password_hasher import PasswordHasher
 from sentinelcore.modules.identity.application.ports.user_repository import UserRepository
@@ -19,9 +25,20 @@ from sentinelcore.shared.domain.errors.validation_error import ValidationError
 
 
 class LoginUseCase(UseCase[LoginInput, TokenPairOutput]):
-    def __init__(self, user_repository: UserRepository, password_hasher: PasswordHasher, refresh_token_repository: RefreshTokenRepository, token_service: TokenService, clock: Clock, unit_of_work: UnitOfWork, refresh_token_ttl: timedelta) -> None:
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        password_hasher: PasswordHasher,
+        session_repository: SessionRepository,
+        refresh_token_repository: RefreshTokenRepository,
+        token_service: TokenService,
+        clock: Clock,
+        unit_of_work: UnitOfWork,
+        refresh_token_ttl: timedelta,
+    ) -> None:
         self._user_repository = user_repository
         self._password_hasher = password_hasher
+        self._session_repository = session_repository
         self._refresh_token_repository = refresh_token_repository
         self._token_service = token_service
         self._clock = clock
@@ -42,10 +59,20 @@ class LoginUseCase(UseCase[LoginInput, TokenPairOutput]):
             raise InvalidCredentialsError("Invalid email or password")
 
         now = self._clock.now()
+
+        session = Session.start(
+            user_id=user.id,
+            started_at=now,
+            ip_address=input_data.ip_address,
+            user_agent=input_data.user_agent,
+        )
+        await self._session_repository.add(session)
+
         access_token = self._token_service.create_access_token(subject=str(user.id))
         raw_refresh_token = token_urlsafe(32)
 
         refresh_token = RefreshToken.issue(
+            session_id=session.id,
             user_id=user.id,
             token_hash=hash_refresh_token(raw_refresh_token),
             issued_at=now,
