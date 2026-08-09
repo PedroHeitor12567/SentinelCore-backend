@@ -63,3 +63,12 @@ class SqlAlchemyUserRepository:
         if model is not None:
             await self._session.delete(model)
             await self._session.flush()
+
+    async def get_all(self) -> list[User]:
+        result = await self._session.execute(
+            select(UserModel)
+        )
+
+        models = result.scalars().all()
+
+        return [_to_entity(model) for model in models]

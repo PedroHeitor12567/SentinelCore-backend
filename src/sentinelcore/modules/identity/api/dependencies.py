@@ -10,6 +10,7 @@ from sentinelcore.modules.identity.application.use_cases.deactive_user_use_case 
 from sentinelcore.modules.identity.application.use_cases.get_user_use_case import GetUserUseCase
 from sentinelcore.modules.identity.application.ports.password_hasher import PasswordHasher
 from sentinelcore.modules.identity.application.ports.user_repository import UserRepository
+from sentinelcore.modules.identity.application.use_cases.list_users_use_case import ListUsersUseCase
 from sentinelcore.modules.identity.infrastructure.repository.sql_alchemy_user_repository import SqlAlchemyUserRepository
 
 _password_hasher = Argon2PasswordHasher()
@@ -52,8 +53,14 @@ def get_deactivate_user_use_case(
 def get_get_user_use_case(user_repository: UserRepositoryDep) -> GetUserUseCase:
     return GetUserUseCase(user_repository)
 
+def get_list_users_use_case(user_repository: UserRepositoryDep) -> ListUsersUseCase:
+    return ListUsersUseCase(user_repository)
 
 CreateUserUseCaseDep = Annotated[CreateUserUseCase, Depends(get_create_user_use_case)]
 ActivateUserUseCaseDep = Annotated[ActivateUserUseCase, Depends(get_activate_user_use_case)]
 DeactivateUserUseCaseDep = Annotated[DeactiveUserUseCase, Depends(get_deactivate_user_use_case)]
 GetUserUseCaseDep = Annotated[GetUserUseCase, Depends(get_get_user_use_case)]
+ListUsersUseCaseDep = Annotated[
+    ListUsersUseCase,
+    Depends(get_list_users_use_case),
+]
