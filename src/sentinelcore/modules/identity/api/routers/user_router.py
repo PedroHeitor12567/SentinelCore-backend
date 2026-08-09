@@ -7,6 +7,7 @@ from sentinelcore.modules.identity.api.dependencies import (
     CreateUserUseCaseDep,
     DeactivateUserUseCaseDep,
     GetUserUseCaseDep,
+    ListUsersUseCaseDep
 )
 from sentinelcore.modules.identity.api.schemas.request.create_user_request import CreateUserRequest
 from sentinelcore.modules.identity.api.schemas.response.user_response import UserResponse
@@ -26,6 +27,12 @@ async def create_user(request: CreateUserRequest, use_case: CreateUserUseCaseDep
 async def get_user(user_id: UUID, use_case: GetUserUseCaseDep) -> UserResponse:
     output = await use_case.execute(UserIdInput(user_id=user_id))
     return UserResponse.from_output(output)
+
+@router.get("", response_model=list[UserResponse])
+async def list_users(use_case: ListUsersUseCaseDep) -> list[UserResponse]:
+    outputs = await use_case.execute()
+
+    return [UserResponse.from_output(output) for output in outputs]
 
 
 @router.post("/{user_id}/activate", response_model=UserResponse)
