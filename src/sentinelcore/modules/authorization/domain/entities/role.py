@@ -6,7 +6,7 @@ from sentinelcore.shared.domain.entity import Entity
 
 class Role(Entity):
     def __init__(self, id: UUID, name: str, description: str, permission_ids: set[UUID], created_at: datetime) -> None:
-        self.id = id
+        super().__init__(id)
         self.name = name
         self.description = description
         self.permission_ids = set(permission_ids)

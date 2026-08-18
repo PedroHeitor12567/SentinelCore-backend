@@ -14,8 +14,8 @@ class CreatePermissionUseCase(UseCase[CreatePermissionInput, PermissionOutput]):
         self._unit_of_work = unit_of_work
 
     async def execute(self, input_data: CreatePermissionInput) -> PermissionOutput:
-        existing =  await self._permission_repository.get_by_code(input_data.code)
-        if existing is None:
+        existing = await self._permission_repository.get_by_code(input_data.code)
+        if existing is not None:
             raise PermissionCodeAlreadyInUseError(f"Permission code '{input_data.code}' is already in use.")
 
         permission = Permission.create(code=input_data.code, description=input_data.description)

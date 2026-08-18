@@ -1,14 +1,16 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from starlette import status
 
 from sentinelcore.modules.authentication.api.dependencies import CurrentUserId
-from sentinelcore.modules.authorization.api.dependencies import AssignRoleToUserUseCaseDep,GetUserPermissionsUseCaseDep,UnassignRoleFromUserUseCaseDep
+from sentinelcore.modules.authorization.api.dependencies import AssignRoleToUserUseCaseDep,GetUserPermissionsUseCaseDep,UnassignRoleFromUserUseCaseDep,require_permission
 from sentinelcore.modules.authorization.api.schemas.response.user_permissions_response import UserPermissionsResponse
 from sentinelcore.modules.authorization.application.dtos.input.assign_role_input import AssignRoleInput
 from sentinelcore.modules.authorization.application.dtos.input.get_user_permissions_input import GetUserPermissionsInput
 from sentinelcore.modules.authorization.application.dtos.input.unassign_role_input import UnassignRoleInput
+from sentinelcore.modules.authorization.domain.errors.insufficient_permission_error import InsufficientPermissionError
 
 router = APIRouter(prefix="/users", tags=["authorization"])
 
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/users", tags=["authorization"])
 async def assign_role(
     user_id: UUID,
     role_id: UUID,
-    _current_user_id: CurrentUserId,
+    _current_user_id: Annotated[UUID, Depends(require_permission("users:manage_roles"))],
     use_case: AssignRoleToUserUseCaseDep,
 ) -> None:
     await use_case.execute(AssignRoleInput(user_id=user_id, role_id=role_id))
@@ -27,7 +29,7 @@ async def assign_role(
 async def unassign_role(
     user_id: UUID,
     role_id: UUID,
-    _current_user_id: CurrentUserId,
+    _current_user_id: Annotated[UUID, Depends(require_permission("users:manage_roles"))],
     use_case: UnassignRoleFromUserUseCaseDep,
 ) -> None:
     await use_case.execute(UnassignRoleInput(user_id=user_id, role_id=role_id))
@@ -36,8 +38,11 @@ async def unassign_role(
 @router.get("/{user_id}/permissions", response_model=UserPermissionsResponse)
 async def get_user_permissions(
     user_id: UUID,
-    _current_user_id: CurrentUserId,
+    current_user_id: CurrentUserId,
     use_case: GetUserPermissionsUseCaseDep,
 ) -> UserPermissionsResponse:
+    if user_id != current_user_id:
+        checker = require_permission("users:read_permissions")
+        await checker(current_user_id, use_case)
     output = await use_case.execute(GetUserPermissionsInput(user_id=user_id))
     return UserPermissionsResponse.from_output(output)
