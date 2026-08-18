@@ -1,0 +1,16 @@
+from typing import Protocol
+from uuid import UUID
+
+from sentinelcore.modules.authorization.domain.entities.role import Role
+
+
+class RoleRepository(Protocol):
+    async def get_by_id(self, role_id: UUID) -> Role | None: ...
+
+    async def get_by_name(self, name: str) -> Role | None: ...
+
+    async def list_all(self) -> list[Role]: ...
+
+    async def add(self, role: Role) -> None: ...
+
+    async def update(self, role: Role) -> None: ...
