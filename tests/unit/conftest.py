@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 
+from tests.unit.modules.audit.fakes.fake_audit_log_repository import FakeAuditLogRepository
 from tests.unit.modules.authentication.fakes.fake_refresh_token_repository import FakeRefreshTokenRepository
 from tests.unit.modules.authentication.fakes.fake_token_service import FakeTokenService
 from tests.unit.modules.authentication.fakes.fixed_clock import FixedClock
@@ -45,3 +46,7 @@ def password_hasher() -> FakePasswordHasher:
 @pytest.fixture
 def unit_of_work() -> FakeUnitOfWork:
     return FakeUnitOfWork()
+
+@pytest.fixture
+def audit_log_repository() -> FakeAuditLogRepository:
+    return FakeAuditLogRepository()

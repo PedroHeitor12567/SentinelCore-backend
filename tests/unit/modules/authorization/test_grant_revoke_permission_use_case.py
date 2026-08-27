@@ -16,12 +16,12 @@ from sentinelcore.modules.authorization.domain.errors.permission_not_found_error
 from sentinelcore.modules.authorization.domain.errors.role_not_found_error import RoleNotFoundError
 
 
-async def test_grant_permission_adds_permission_to_role(role_repository, permission_repository, unit_of_work) -> None:
+async def test_grant_permission_adds_permission_to_role(role_repository, permission_repository, unit_of_work, audit_log_repository) -> None:
     role = Role.create(name="admin", description="Administrator")
     permission = Permission.create(code="roles:create", description="Create roles")
     await role_repository.add(role)
     await permission_repository.add(permission)
-    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work)
+    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work, audit_log_repository)
 
     output = await use_case.execute(GrantPermissionInput(role_id=role.id, permission_id=permission.id))
 
@@ -29,30 +29,30 @@ async def test_grant_permission_adds_permission_to_role(role_repository, permiss
     assert unit_of_work.committed is True
 
 
-async def test_grant_permission_with_unknown_role_raises_error(role_repository, permission_repository, unit_of_work) -> None:
+async def test_grant_permission_with_unknown_role_raises_error(role_repository, permission_repository, unit_of_work, audit_log_repository) -> None:
     permission = Permission.create(code="roles:create", description="Create roles")
     await permission_repository.add(permission)
-    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work)
+    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work, audit_log_repository)
 
     with pytest.raises(RoleNotFoundError):
         await use_case.execute(GrantPermissionInput(role_id=uuid4(), permission_id=permission.id))
 
 
-async def test_grant_permission_with_unknown_permission_raises_error(role_repository, permission_repository, unit_of_work) -> None:
+async def test_grant_permission_with_unknown_permission_raises_error(role_repository, permission_repository, unit_of_work, audit_log_repository) -> None:
     role = Role.create(name="admin", description="Administrator")
     await role_repository.add(role)
-    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work)
+    use_case = GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work, audit_log_repository)
 
     with pytest.raises(PermissionNotFoundError):
         await use_case.execute(GrantPermissionInput(role_id=role.id, permission_id=uuid4()))
 
 
-async def test_revoke_permission_removes_permission_from_role(role_repository, unit_of_work) -> None:
+async def test_revoke_permission_removes_permission_from_role(role_repository, unit_of_work, audit_log_repository) -> None:
     role = Role.create(name="admin", description="Administrator")
     permission_id = uuid4()
     role.grant_permission(permission_id)
     await role_repository.add(role)
-    use_case = RevokePermissionFromRoleUseCase(role_repository, unit_of_work)
+    use_case = RevokePermissionFromRoleUseCase(role_repository, unit_of_work, audit_log_repository)
 
     output = await use_case.execute(RevokePermissionInput(role_id=role.id, permission_id=permission_id))
 
@@ -60,8 +60,8 @@ async def test_revoke_permission_removes_permission_from_role(role_repository, u
     assert unit_of_work.committed is True
 
 
-async def test_revoke_permission_with_unknown_role_raises_error(role_repository, unit_of_work) -> None:
-    use_case = RevokePermissionFromRoleUseCase(role_repository, unit_of_work)
+async def test_revoke_permission_with_unknown_role_raises_error(role_repository, unit_of_work, audit_log_repository) -> None:
+    use_case = RevokePermissionFromRoleUseCase(role_repository, unit_of_work, audit_log_repository)
 
     with pytest.raises(RoleNotFoundError):
         await use_case.execute(RevokePermissionInput(role_id=uuid4(), permission_id=uuid4()))

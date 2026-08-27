@@ -6,3 +6,4 @@ from uuid import UUID
 class GrantPermissionInput:
     role_id: UUID
     permission_id: UUID
+    actor_id: UUID | None = None
