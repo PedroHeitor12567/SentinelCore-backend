@@ -6,8 +6,8 @@ from sentinelcore.modules.identity.domain.errors.email_already_in_use_error impo
 from sentinelcore.modules.identity.domain.enums.user_status import UserStatus
 
 
-async def test_create_user_persists_user_with_hashed_password(user_repository, password_hasher, unit_of_work) -> None:
-    use_case = CreateUserUseCase(user_repository, password_hasher, unit_of_work)
+async def test_create_user_persists_user_with_hashed_password(user_repository, password_hasher, unit_of_work, audit_log_repository) -> None:
+    use_case = CreateUserUseCase(user_repository, password_hasher, unit_of_work, audit_log_repository)
 
     output = await use_case.execute(CreateUserInput(email="user@example.com", password="s3cr3t!!"))
 
@@ -18,8 +18,8 @@ async def test_create_user_persists_user_with_hashed_password(user_repository, p
     assert unit_of_work.committed is True
 
 
-async def test_create_user_with_duplicate_email_raises_error(user_repository, password_hasher, unit_of_work) -> None:
-    use_case = CreateUserUseCase(user_repository, password_hasher, unit_of_work)
+async def test_create_user_with_duplicate_email_raises_error(user_repository, password_hasher, unit_of_work, audit_log_repository) -> None:
+    use_case = CreateUserUseCase(user_repository, password_hasher, unit_of_work, audit_log_repository)
     await use_case.execute(CreateUserInput(email="user@example.com", password="s3cr3t!!"))
 
     with pytest.raises(EmailAlreadyInUseError):

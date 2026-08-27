@@ -1,3 +1,6 @@
+from sentinelcore.modules.audit.application.ports.audit_log_repository import AuditLogRepository
+from sentinelcore.modules.audit.domain.entities.audit_log import AuditLog
+from sentinelcore.modules.audit.domain.enums.audit_event_type import AuditEventType
 from sentinelcore.modules.authorization.application.dtos.input.grant_permission_input import GrantPermissionInput
 from sentinelcore.modules.authorization.application.dtos.output.role_output import RoleOutput
 from sentinelcore.modules.authorization.application.ports.permission_repository import PermissionRepository
@@ -14,10 +17,12 @@ class GrantPermissionToRoleUseCase(UseCase[GrantPermissionInput, RoleOutput]):
         role_repository: RoleRepository,
         permission_repository: PermissionRepository,
         unit_of_work: UnitOfWork,
+        audit_log_repository: AuditLogRepository,
     ) -> None:
         self._role_repository = role_repository
         self._permission_repository = permission_repository
         self._unit_of_work = unit_of_work
+        self._audit_log_repository = audit_log_repository
 
     async def execute(self, input_data: GrantPermissionInput) -> RoleOutput:
         role = await self._role_repository.get_by_id(input_data.role_id)
@@ -30,6 +35,21 @@ class GrantPermissionToRoleUseCase(UseCase[GrantPermissionInput, RoleOutput]):
 
         role.grant_permission(permission.id)
         await self._role_repository.update(role)
+
+        await self._audit_log_repository.add(
+            AuditLog.record(
+                event_type=AuditEventType.PERMISSION_CHANGED,
+                actor_id=input_data.actor_id,
+                target_id=role.id,
+                metadata={
+                    "action": "permission_granted",
+                    "role_id": str(role.id),
+                    "permission_id": str(permission.id),
+                    "permission_code": permission.code,
+                },
+            )
+        )
+
         await self._unit_of_work.commit()
 
         return RoleOutput.from_role(role)

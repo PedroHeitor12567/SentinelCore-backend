@@ -4,6 +4,7 @@ from fastapi import Depends
 
 from sentinelcore.core.dependencies import UoW
 from sentinelcore.infrastructure.security.argon2_password_hasher import Argon2PasswordHasher
+from sentinelcore.modules.audit.api.dependencies import AuditLogRepositoryDep
 from sentinelcore.modules.identity.application.use_cases.activate_user_use_case import ActivateUserUseCase
 from sentinelcore.modules.identity.application.use_cases.create_user_use_case import CreateUserUseCase
 from sentinelcore.modules.identity.application.use_cases.deactive_user_use_case import DeactiveUserUseCase
@@ -32,8 +33,9 @@ def get_create_user_use_case(
     user_repository: UserRepositoryDep,
     password_hasher: PasswordHasherDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> CreateUserUseCase:
-    return CreateUserUseCase(user_repository, password_hasher, unit_of_work)
+    return CreateUserUseCase(user_repository, password_hasher, unit_of_work, audit_log_repository)
 
 
 def get_activate_user_use_case(

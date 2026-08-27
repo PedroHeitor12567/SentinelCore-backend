@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from sentinelcore.core.dependencies import UoW
+from sentinelcore.modules.audit.api.dependencies import AuditLogRepositoryDep
 from sentinelcore.modules.authentication.api.dependencies import CurrentUserId
 from sentinelcore.modules.authorization.application.dtos.input.get_user_permissions_input import GetUserPermissionsInput
 from sentinelcore.modules.authorization.application.ports.permission_repository import PermissionRepository
@@ -47,42 +48,54 @@ PermissionRepositoryDep = Annotated[PermissionRepository, Depends(get_permission
 UserRoleRepositoryDep = Annotated[UserRoleRepository, Depends(get_user_role_repository)]
 
 
-def get_create_role_use_case(role_repository: RoleRepositoryDep, unit_of_work: UoW) -> CreateRoleUseCase:
-    return CreateRoleUseCase(role_repository, unit_of_work)
+def get_create_role_use_case(
+    role_repository: RoleRepositoryDep, unit_of_work: UoW, audit_log_repository: AuditLogRepositoryDep
+) -> CreateRoleUseCase:
+    return CreateRoleUseCase(role_repository, unit_of_work, audit_log_repository)
 
 
 def get_create_permission_use_case(
-    permission_repository: PermissionRepositoryDep, unit_of_work: UoW
+    permission_repository: PermissionRepositoryDep,
+    unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> CreatePermissionUseCase:
-    return CreatePermissionUseCase(permission_repository, unit_of_work)
+    return CreatePermissionUseCase(permission_repository, unit_of_work, audit_log_repository)
 
 
 def get_grant_permission_to_role_use_case(
     role_repository: RoleRepositoryDep,
     permission_repository: PermissionRepositoryDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> GrantPermissionToRoleUseCase:
-    return GrantPermissionToRoleUseCase(role_repository, permission_repository, unit_of_work)
+    return GrantPermissionToRoleUseCase(
+        role_repository, permission_repository, unit_of_work, audit_log_repository
+    )
 
 
 def get_revoke_permission_from_role_use_case(
-    role_repository: RoleRepositoryDep, unit_of_work: UoW
+    role_repository: RoleRepositoryDep, unit_of_work: UoW, audit_log_repository: AuditLogRepositoryDep
 ) -> RevokePermissionFromRoleUseCase:
-    return RevokePermissionFromRoleUseCase(role_repository, unit_of_work)
+    return RevokePermissionFromRoleUseCase(role_repository, unit_of_work, audit_log_repository)
 
 
 def get_assign_role_to_user_use_case(
     role_repository: RoleRepositoryDep,
     user_role_repository: UserRoleRepositoryDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> AssignRoleToUserUseCase:
-    return AssignRoleToUserUseCase(role_repository, user_role_repository, unit_of_work)
+    return AssignRoleToUserUseCase(
+        role_repository, user_role_repository, unit_of_work, audit_log_repository
+    )
 
 
 def get_unassign_role_from_user_use_case(
-    user_role_repository: UserRoleRepositoryDep, unit_of_work: UoW
+    user_role_repository: UserRoleRepositoryDep,
+    unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> UnassignRoleFromUserUseCase:
-    return UnassignRoleFromUserUseCase(user_role_repository, unit_of_work)
+    return UnassignRoleFromUserUseCase(user_role_repository, unit_of_work, audit_log_repository)
 
 
 def get_list_roles_use_case(role_repository: RoleRepositoryDep) -> ListRolesUseCase:

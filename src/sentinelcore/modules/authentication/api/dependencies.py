@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from sentinelcore.core.config.settings import get_settings
 from sentinelcore.core.dependencies import UoW
+from sentinelcore.modules.audit.api.dependencies import AuditLogRepositoryDep
 from sentinelcore.modules.authentication.application.dtos.input.validate_access_token_input import (
     ValidateAccessTokenInput,
 )
@@ -80,6 +81,7 @@ def get_login_use_case(
     clock: ClockDep,
     unit_of_work: UoW,
     refresh_token_ttl: RefreshTokenTtlDep,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> LoginUseCase:
     return LoginUseCase(
         user_repository=user_repository,
@@ -90,6 +92,7 @@ def get_login_use_case(
         clock=clock,
         unit_of_work=unit_of_work,
         refresh_token_ttl=refresh_token_ttl,
+        audit_log_repository=audit_log_repository,
     )
 
 

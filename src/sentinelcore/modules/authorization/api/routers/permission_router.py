@@ -15,10 +15,12 @@ router = APIRouter(prefix="/permissions", tags=["authorization"])
 @router.post("", response_model=PermissionResponse, status_code=status.HTTP_201_CREATED)
 async def create_permission(
     body: CreatePermissionRequest,
-    _current_user_id: Annotated[UUID, Depends(require_permission("permissions:create"))],
+    current_user_id: Annotated[UUID, Depends(require_permission("permissions:create"))],
     use_case: CreatePermissionUseCaseDep,
 ) -> PermissionResponse:
-    output = await use_case.execute(CreatePermissionInput(code=body.code, description=body.description))
+    output = await use_case.execute(
+        CreatePermissionInput(code=body.code, description=body.description, actor_id=current_user_id)
+    )
     return PermissionResponse.from_output(output)
 
 

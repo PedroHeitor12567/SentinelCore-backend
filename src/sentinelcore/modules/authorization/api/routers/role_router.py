@@ -17,12 +17,39 @@ router = APIRouter(prefix="/roles", tags=["authorization"])
 @router.post("", response_model=RoleResponse, status_code=status.HTTP_201_CREATED)
 async def create_role(
     body: CreateRoleRequest,
-    _current_user_id: Annotated[UUID, Depends(require_permission("roles:create"))],
+    current_user_id: Annotated[UUID, Depends(require_permission("roles:create"))],
     use_case: CreateRoleUseCaseDep,
 ) -> RoleResponse:
-    output = await use_case.execute(CreateRoleInput(name=body.name, description=body.description))
+    output = await use_case.execute(
+        CreateRoleInput(name=body.name, description=body.description, actor_id=current_user_id)
+    )
     return RoleResponse.from_output(output)
 
+
+@router.post("/{role_id}/permissions/{permission_id}", response_model=RoleResponse)
+async def grant_permission(
+    role_id: UUID,
+    permission_id: UUID,
+    current_user_id: Annotated[UUID, Depends(require_permission("roles:manage_permissions"))],
+    use_case: GrantPermissionToRoleUseCaseDep,
+) -> RoleResponse:
+    output = await use_case.execute(
+        GrantPermissionInput(role_id=role_id, permission_id=permission_id, actor_id=current_user_id)
+    )
+    return RoleResponse.from_output(output)
+
+
+@router.delete("/{role_id}/permissions/{permission_id}", response_model=RoleResponse)
+async def revoke_permission(
+    role_id: UUID,
+    permission_id: UUID,
+    current_user_id: Annotated[UUID, Depends(require_permission("roles:manage_permissions"))],
+    use_case: RevokePermissionFromRoleUseCaseDep,
+) -> RoleResponse:
+    output = await use_case.execute(
+        RevokePermissionInput(role_id=role_id, permission_id=permission_id, actor_id=current_user_id)
+    )
+    return RoleResponse.from_output(output)
 
 @router.get("", response_model=list[RoleResponse])
 async def list_roles(
@@ -31,25 +58,3 @@ async def list_roles(
 ) -> list[RoleResponse]:
     outputs = await use_case.execute(None)
     return [RoleResponse.from_output(output) for output in outputs]
-
-
-@router.post("/{role_id}/permissions/{permission_id}", response_model=RoleResponse)
-async def grant_permission(
-    role_id: UUID,
-    permission_id: UUID,
-    _current_user_id: Annotated[UUID, Depends(require_permission("roles:manage_permissions"))],
-    use_case: GrantPermissionToRoleUseCaseDep,
-) -> RoleResponse:
-    output = await use_case.execute(GrantPermissionInput(role_id=role_id, permission_id=permission_id))
-    return RoleResponse.from_output(output)
-
-
-@router.delete("/{role_id}/permissions/{permission_id}", response_model=RoleResponse)
-async def revoke_permission(
-    role_id: UUID,
-    permission_id: UUID,
-    _current_user_id: Annotated[UUID, Depends(require_permission("roles:manage_permissions"))],
-    use_case: RevokePermissionFromRoleUseCaseDep,
-) -> RoleResponse:
-    output = await use_case.execute(RevokePermissionInput(role_id=role_id, permission_id=permission_id))
-    return RoleResponse.from_output(output)

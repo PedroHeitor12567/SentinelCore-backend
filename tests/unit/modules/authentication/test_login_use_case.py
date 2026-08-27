@@ -14,7 +14,7 @@ _TTL = timedelta(days=7)
 
 
 def _build_use_case(
-    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
 ) -> LoginUseCase:
     return LoginUseCase(
         user_repository=user_repository,
@@ -25,17 +25,18 @@ def _build_use_case(
         clock=clock,
         unit_of_work=unit_of_work,
         refresh_token_ttl=_TTL,
+        audit_log_repository=audit_log_repository,
     )
 
 
 async def test_login_with_valid_credentials_returns_token_pair(
-    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
 ) -> None:
     user = User.create(email=Email("user@example.com"), password_hash=password_hasher.hash("s3cr3t!!"))
     user.activate()
     await user_repository.add(user)
     use_case = _build_use_case(
-        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
     )
 
     output = await use_case.execute(
@@ -53,13 +54,13 @@ async def test_login_with_valid_credentials_returns_token_pair(
 
 
 async def test_login_with_wrong_password_raises_invalid_credentials(
-    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
 ) -> None:
     user = User.create(email=Email("user@example.com"), password_hash=password_hasher.hash("s3cr3t!!"))
     user.activate()
     await user_repository.add(user)
     use_case = _build_use_case(
-        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
     )
 
     with pytest.raises(InvalidCredentialsError):
@@ -67,10 +68,10 @@ async def test_login_with_wrong_password_raises_invalid_credentials(
 
 
 async def test_login_with_unknown_email_raises_invalid_credentials(
-    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
 ) -> None:
     use_case = _build_use_case(
-        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
     )
 
     with pytest.raises(InvalidCredentialsError):
@@ -78,12 +79,12 @@ async def test_login_with_unknown_email_raises_invalid_credentials(
 
 
 async def test_login_with_pending_user_raises_invalid_credentials(
-    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+    user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
 ) -> None:
     user = User.create(email=Email("pending@example.com"), password_hash=password_hasher.hash("s3cr3t!!"))
     await user_repository.add(user)
     use_case = _build_use_case(
-        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work
+        user_repository, password_hasher, session_repository, refresh_token_repository, token_service, clock, unit_of_work, audit_log_repository
     )
 
     with pytest.raises(InvalidCredentialsError):

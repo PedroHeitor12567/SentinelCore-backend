@@ -7,8 +7,8 @@ from sentinelcore.modules.authorization.domain.errors.permission_code_already_in
 )
 
 
-async def test_create_permission_persists_permission(permission_repository, unit_of_work) -> None:
-    use_case = CreatePermissionUseCase(permission_repository, unit_of_work)
+async def test_create_permission_persists_permission(permission_repository, unit_of_work, audit_log_repository) -> None:
+    use_case = CreatePermissionUseCase(permission_repository, unit_of_work, audit_log_repository)
 
     output = await use_case.execute(CreatePermissionInput(code="roles:create", description="Create roles"))
 
@@ -18,8 +18,8 @@ async def test_create_permission_persists_permission(permission_repository, unit
     assert unit_of_work.committed is True
 
 
-async def test_create_permission_with_duplicate_code_raises_error(permission_repository, unit_of_work) -> None:
-    use_case = CreatePermissionUseCase(permission_repository, unit_of_work)
+async def test_create_permission_with_duplicate_code_raises_error(permission_repository, unit_of_work, audit_log_repository) -> None:
+    use_case = CreatePermissionUseCase(permission_repository, unit_of_work, audit_log_repository)
     await use_case.execute(CreatePermissionInput(code="roles:create", description="Create roles"))
 
     with pytest.raises(PermissionCodeAlreadyInUseError):

@@ -10,6 +10,7 @@ from sentinelcore.modules.sessions.api.routers.session_router import router as s
 from sentinelcore.modules.authorization.api.routers.role_router import router as role_router
 from sentinelcore.modules.authorization.api.routers.permission_router import router as permission_router
 from sentinelcore.modules.authorization.api.routers.user_role_router import router as user_role_router
+from sentinelcore.modules.audit.api.routers.audit_log_router import router as audit_log_router
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(role_router, prefix=settings.api_v1_prefix)
     app.include_router(permission_router, prefix=settings.api_v1_prefix)
     app.include_router(user_role_router, prefix=settings.api_v1_prefix)
+    app.include_router(audit_log_router, prefix=settings.api_v1_prefix)
 
     return app
 
