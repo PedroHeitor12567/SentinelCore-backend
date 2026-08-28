@@ -12,6 +12,12 @@ from sentinelcore.modules.authentication.application.dtos.input.validate_access_
     ValidateAccessTokenInput,
 )
 from sentinelcore.modules.authentication.application.ports.clock import Clock
+from sentinelcore.modules.authentication.domain.errors.access_token_expired_error import (
+    AccessTokenExpiredError,
+)
+from sentinelcore.modules.authentication.domain.errors.invalid_access_token_error import (
+    InvalidAccessTokenError,
+)
 from sentinelcore.modules.authentication.application.ports.refresh_token_repository import (
     RefreshTokenRepository,
 )
@@ -103,6 +109,7 @@ def get_refresh_token_use_case(
     clock: ClockDep,
     unit_of_work: UoW,
     refresh_token_ttl: RefreshTokenTtlDep,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> RefreshTokenUseCase:
     return RefreshTokenUseCase(
         refresh_token_repository=refresh_token_repository,
@@ -111,6 +118,7 @@ def get_refresh_token_use_case(
         clock=clock,
         unit_of_work=unit_of_work,
         refresh_token_ttl=refresh_token_ttl,
+        audit_log_repository=audit_log_repository,
     )
 
 
@@ -119,12 +127,14 @@ def get_logout_use_case(
     session_repository: SessionRepositoryDep,
     clock: ClockDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> LogoutUseCase:
     return LogoutUseCase(
         refresh_token_repository=refresh_token_repository,
         session_repository=session_repository,
         clock=clock,
         unit_of_work=unit_of_work,
+        audit_log_repository=audit_log_repository,
     )
 
 
@@ -148,3 +158,20 @@ async def get_current_user_id(
 
 
 CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
+
+_optional_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_optional_current_user_id(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_optional_bearer_scheme)],
+    use_case: ValidateAccessTokenUseCaseDep,
+) -> UUID | None:
+    if credentials is None:
+        return None
+    try:
+        return await use_case.execute(ValidateAccessTokenInput(access_token=credentials.credentials))
+    except (AccessTokenExpiredError, InvalidAccessTokenError):
+        return None
+
+
+OptionalCurrentUserId = Annotated[UUID | None, Depends(get_optional_current_user_id)]

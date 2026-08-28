@@ -117,7 +117,7 @@ async def test_create_user_records_user_created_event(
     assert log.target_id == output.id
 
 
-async def test_create_role_records_sensitive_operation_event(role_repository, unit_of_work, audit_log_repository) -> None:
+async def test_create_role_records_role_created_event(role_repository, unit_of_work, audit_log_repository) -> None:
     actor_id = uuid4()
     use_case = CreateRoleUseCase(role_repository, unit_of_work, audit_log_repository)
 
@@ -125,7 +125,7 @@ async def test_create_role_records_sensitive_operation_event(role_repository, un
 
     assert len(audit_log_repository.logs) == 1
     log = audit_log_repository.logs[0]
-    assert log.event_type == AuditEventType.SENSITIVE_OPERATION
+    assert log.event_type == AuditEventType.ROLE_CREATED
     assert log.actor_id == actor_id
 
 

@@ -31,7 +31,7 @@ class CreateRoleUseCase(UseCase[CreateRoleInput, RoleOutput]):
 
         await self._audit_log_repository.add(
             AuditLog.record(
-                event_type=AuditEventType.SENSITIVE_OPERATION,
+                event_type=AuditEventType.ROLE_CREATED,
                 actor_id=input_data.actor_id,
                 target_id=role.id,
                 metadata={"action": "role_created", "role_id": str(role.id), "role_name": role.name},
