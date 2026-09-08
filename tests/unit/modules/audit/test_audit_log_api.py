@@ -152,10 +152,11 @@ async def test_role_creation_and_permission_grant_are_recorded(
 
     response = client.get("/api/v1/audit-logs", headers=headers)
     event_types = [entry["event_type"] for entry in response.json()]
-    assert "sensitive_operation" in event_types
-    assert "permission_changed" in event_types
+    assert "role_created" in event_types
+    assert "permission_created" in event_types
+    assert "permission_granted" in event_types
 
-    actors = [entry["actor_id"] for entry in response.json() if entry["event_type"] == "permission_changed"]
+    actors = [entry["actor_id"] for entry in response.json() if entry["event_type"] == "permission_granted"]
     assert tokens["user_id"] in actors
 
 

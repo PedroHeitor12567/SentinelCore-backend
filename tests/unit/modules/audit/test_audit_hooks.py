@@ -15,6 +15,10 @@ from sentinelcore.modules.authorization.application.dtos.input.create_role_input
 from sentinelcore.modules.authorization.application.dtos.input.grant_permission_input import (
     GrantPermissionInput,
 )
+from sentinelcore.modules.authorization.application.dtos.input.revoke_permission_input import (
+    RevokePermissionInput,
+)
+from sentinelcore.modules.authorization.application.dtos.input.unassign_role_input import UnassignRoleInput
 from sentinelcore.modules.authorization.application.use_cases.assign_role_to_user_use_case import (
     AssignRoleToUserUseCase,
 )
@@ -24,6 +28,12 @@ from sentinelcore.modules.authorization.application.use_cases.create_permission_
 from sentinelcore.modules.authorization.application.use_cases.create_role_use_case import CreateRoleUseCase
 from sentinelcore.modules.authorization.application.use_cases.grant_permission_to_role_use_case import (
     GrantPermissionToRoleUseCase,
+)
+from sentinelcore.modules.authorization.application.use_cases.revoke_permission_from_role_use_case import (
+    RevokePermissionFromRoleUseCase,
+)
+from sentinelcore.modules.authorization.application.use_cases.unassign_role_from_user_use_case import (
+    UnassignRoleFromUserUseCase,
 )
 from sentinelcore.modules.authorization.domain.entities.role import Role
 from sentinelcore.modules.identity.application.dtos.input.create_user_input import CreateUserInput
@@ -129,17 +139,17 @@ async def test_create_role_records_role_created_event(role_repository, unit_of_w
     assert log.actor_id == actor_id
 
 
-async def test_create_permission_records_sensitive_operation_event(
+async def test_create_permission_records_permission_created_event(
     permission_repository, unit_of_work, audit_log_repository
 ) -> None:
     use_case = CreatePermissionUseCase(permission_repository, unit_of_work, audit_log_repository)
 
     await use_case.execute(CreatePermissionInput(code="roles:create", description="Create roles"))
 
-    assert audit_log_repository.logs[0].event_type == AuditEventType.SENSITIVE_OPERATION
+    assert audit_log_repository.logs[0].event_type == AuditEventType.PERMISSION_CREATED
 
 
-async def test_grant_permission_records_permission_changed_event(
+async def test_grant_permission_records_permission_granted_event(
     role_repository, permission_repository, unit_of_work, audit_log_repository
 ) -> None:
     role = Role.create(name="admin", description="Administrator")
@@ -156,12 +166,35 @@ async def test_grant_permission_records_permission_changed_event(
     )
 
     log = audit_log_repository.logs[0]
-    assert log.event_type == AuditEventType.PERMISSION_CHANGED
+    assert log.event_type == AuditEventType.PERMISSION_GRANTED
     assert log.actor_id == actor_id
     assert log.metadata["action"] == "permission_granted"
 
 
-async def test_assign_role_records_permission_changed_event(
+async def test_revoke_permission_records_permission_revoked_event(
+    role_repository, permission_repository, unit_of_work, audit_log_repository
+) -> None:
+    role = Role.create(name="admin", description="Administrator")
+    from sentinelcore.modules.authorization.domain.entities.permission import Permission
+
+    permission = Permission.create(code="roles:create", description="Create roles")
+    await permission_repository.add(permission)
+    role.grant_permission(permission.id)
+    await role_repository.add(role)
+    actor_id = uuid4()
+    use_case = RevokePermissionFromRoleUseCase(role_repository, unit_of_work, audit_log_repository)
+
+    await use_case.execute(
+        RevokePermissionInput(role_id=role.id, permission_id=permission.id, actor_id=actor_id)
+    )
+
+    log = audit_log_repository.logs[0]
+    assert log.event_type == AuditEventType.PERMISSION_REVOKED
+    assert log.actor_id == actor_id
+    assert log.target_id == role.id
+
+
+async def test_assign_role_records_role_assigned_event(
     role_repository, user_role_repository, unit_of_work, audit_log_repository
 ) -> None:
     role = Role.create(name="admin", description="Administrator")
@@ -173,7 +206,26 @@ async def test_assign_role_records_permission_changed_event(
     await use_case.execute(AssignRoleInput(user_id=user_id, role_id=role.id, actor_id=actor_id))
 
     log = audit_log_repository.logs[0]
-    assert log.event_type == AuditEventType.PERMISSION_CHANGED
+    assert log.event_type == AuditEventType.ROLE_ASSIGNED
     assert log.actor_id == actor_id
     assert log.target_id == user_id
     assert log.metadata["action"] == "role_assigned"
+
+
+async def test_unassign_role_records_role_unassigned_event(
+    role_repository, user_role_repository, unit_of_work, audit_log_repository
+) -> None:
+    role = Role.create(name="admin", description="Administrator")
+    await role_repository.add(role)
+    user_id = uuid4()
+    actor_id = uuid4()
+    await user_role_repository.assign(user_id=user_id, role_id=role.id)
+    use_case = UnassignRoleFromUserUseCase(user_role_repository, unit_of_work, audit_log_repository)
+
+    await use_case.execute(UnassignRoleInput(user_id=user_id, role_id=role.id, actor_id=actor_id))
+
+    log = audit_log_repository.logs[0]
+    assert log.event_type == AuditEventType.ROLE_UNASSIGNED
+    assert log.actor_id == actor_id
+    assert log.target_id == user_id
+    assert log.metadata["action"] == "role_unassigned"
