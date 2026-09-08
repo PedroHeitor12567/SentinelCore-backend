@@ -23,7 +23,7 @@ class UnassignRoleFromUserUseCase(UseCase[UnassignRoleInput, None]):
 
         await self._audit_log_repository.add(
             AuditLog.record(
-                event_type=AuditEventType.PERMISSION_CHANGED,
+                event_type=AuditEventType.ROLE_UNASSIGNED,
                 actor_id=input_data.actor_id,
                 target_id=input_data.user_id,
                 metadata={

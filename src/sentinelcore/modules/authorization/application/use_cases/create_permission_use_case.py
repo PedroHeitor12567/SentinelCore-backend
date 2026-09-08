@@ -33,7 +33,7 @@ class CreatePermissionUseCase(UseCase[CreatePermissionInput, PermissionOutput]):
 
         await self._audit_log_repository.add(
             AuditLog.record(
-                event_type=AuditEventType.SENSITIVE_OPERATION,
+                event_type=AuditEventType.PERMISSION_CREATED,
                 actor_id=input_data.actor_id,
                 target_id=permission.id,
                 metadata={

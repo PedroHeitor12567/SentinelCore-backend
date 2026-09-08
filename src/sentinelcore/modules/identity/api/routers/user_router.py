@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
+from sentinelcore.modules.authentication.api.dependencies import OptionalCurrentUserId
 from sentinelcore.modules.identity.api.dependencies import (
     ActivateUserUseCaseDep,
     CreateUserUseCaseDep,
@@ -36,12 +37,16 @@ async def list_users(use_case: ListUsersUseCaseDep) -> list[UserResponse]:
 
 
 @router.post("/{user_id}/activate", response_model=UserResponse)
-async def activate_user(user_id: UUID, use_case: ActivateUserUseCaseDep) -> UserResponse:
-    output = await use_case.execute(UserIdInput(user_id=user_id))
+async def activate_user(
+    user_id: UUID, current_user_id: OptionalCurrentUserId, use_case: ActivateUserUseCaseDep
+) -> UserResponse:
+    output = await use_case.execute(UserIdInput(user_id=user_id, actor_id=current_user_id))
     return UserResponse.from_output(output)
 
 
 @router.post("/{user_id}/deactivate", response_model=UserResponse)
-async def deactivate_user(user_id: UUID, use_case: DeactivateUserUseCaseDep) -> UserResponse:
-    output = await use_case.execute(UserIdInput(user_id=user_id))
+async def deactivate_user(
+    user_id: UUID, current_user_id: OptionalCurrentUserId, use_case: DeactivateUserUseCaseDep
+) -> UserResponse:
+    output = await use_case.execute(UserIdInput(user_id=user_id, actor_id=current_user_id))
     return UserResponse.from_output(output)

@@ -1,6 +1,9 @@
 from datetime import timedelta
 from secrets import token_urlsafe
 
+from sentinelcore.modules.audit.application.ports.audit_log_repository import AuditLogRepository
+from sentinelcore.modules.audit.domain.entities.audit_log import AuditLog
+from sentinelcore.modules.audit.domain.enums.audit_event_type import AuditEventType
 from sentinelcore.modules.authentication.application.dtos.input.refresh_token_input import (
     RefreshTokenInput,
 )
@@ -36,6 +39,7 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
         clock: Clock,
         unit_of_work: UnitOfWork,
         refresh_token_ttl: timedelta,
+        audit_log_repository: AuditLogRepository,
     ) -> None:
         self._refresh_token_repository = refresh_token_repository
         self._session_repository = session_repository
@@ -43,6 +47,7 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
         self._clock = clock
         self._unit_of_work = unit_of_work
         self._refresh_token_ttl = refresh_token_ttl
+        self._audit_log_repository = audit_log_repository
 
     async def execute(self, input_data: RefreshTokenInput) -> TokenPairOutput:
         token_hash = hash_refresh_token(input_data.refresh_token)
@@ -83,6 +88,15 @@ class RefreshTokenUseCase(UseCase[RefreshTokenInput, TokenPairOutput]):
         await self._session_repository.update(session)
 
         access_token = self._token_service.create_access_token(subject=str(session.user_id))
+
+        await self._audit_log_repository.add(
+            AuditLog.record(
+                event_type=AuditEventType.TOKEN_REFRESHED,
+                actor_id=session.user_id,
+                target_id=session.id,
+                metadata={"session_id": str(session.id)},
+            )
+        )
 
         await self._unit_of_work.commit()
 

@@ -41,15 +41,17 @@ def get_create_user_use_case(
 def get_activate_user_use_case(
     user_repository: UserRepositoryDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> ActivateUserUseCase:
-    return ActivateUserUseCase(user_repository, unit_of_work)
+    return ActivateUserUseCase(user_repository, unit_of_work, audit_log_repository)
 
 
 def get_deactivate_user_use_case(
     user_repository: UserRepositoryDep,
     unit_of_work: UoW,
+    audit_log_repository: AuditLogRepositoryDep,
 ) -> DeactiveUserUseCase:
-    return DeactiveUserUseCase(user_repository, unit_of_work)
+    return DeactiveUserUseCase(user_repository, unit_of_work, audit_log_repository)
 
 
 def get_get_user_use_case(user_repository: UserRepositoryDep) -> GetUserUseCase:
